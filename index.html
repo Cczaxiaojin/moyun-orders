@@ -897,16 +897,19 @@ function openSheet(id){
     <div class="detail-section"><h3>📋 基本信息</h3>
       <div class="detail-row"><span class="label">客户</span><span class="value">${esc(o.customer_name)}</span></div>
       <div class="detail-row"><span class="label">品类</span><span class="value">${esc(o.category)}</span></div>
+      <div class="detail-row"><span class="label">金额</span><span class="value">¥${(o.amount||0).toFixed(2)}</span></div>
       <div class="detail-row"><span class="label">日期</span><span class="value">${o.order_date||'-'}</span></div>
+      <div class="detail-row"><span class="label">状态</span><span class="value"><span class="status-tag ${cls}">${label}</span></span></div>
     </div>
-    ${o.receiver_name||o.receiver_phone||o.receiver_address?`
     <div class="detail-section"><h3>📦 收货信息</h3>
-      ${o.receiver_name?`<div class="detail-row"><span class="label">收件人</span><span class="value">${esc(o.receiver_name)}</span></div>`:''}
-      ${o.receiver_phone?`<div class="detail-row"><span class="label">电话</span><span class="value"><a href="tel:${esc(o.receiver_phone)}" style="color:var(--blue-600);text-decoration:none">${esc(o.receiver_phone)}</a></span></div>`:''}
-      ${o.receiver_address?`<div class="detail-row"><span class="label">地址</span><span class="value">${esc(o.receiver_address)}</span></div>`:''}
-      ${o.tracking_number?`<div class="detail-row"><span class="label">快递单号</span><span class="value">${esc(o.tracking_number)} <button class="copy-btn" onclick="copyText('${esc(o.tracking_number).replace(/'/g,"\\'")}',this)">📋 复制</button></span></div>`:''}
-    </div>`:''}
-    ${o.notes?`<div class="detail-section"><h3>💬 备注</h3><div style="font-size:14px;white-space:pre-wrap;word-break:break-word">${esc(o.notes)}</div></div>`:''}
+      <div class="detail-row"><span class="label">收件人</span><span class="value">${o.receiver_name?esc(o.receiver_name):'<span class="text-muted">-</span>'}</span></div>
+      <div class="detail-row"><span class="label">电话</span><span class="value">${o.receiver_phone?`<a href="tel:${esc(o.receiver_phone)}" style="color:var(--blue-600);text-decoration:none">${esc(o.receiver_phone)}</a>`:'<span class="text-muted">-</span>'}</span></div>
+      <div class="detail-row"><span class="label">地址</span><span class="value">${o.receiver_address?esc(o.receiver_address):'<span class="text-muted">-</span>'}</span></div>
+      <div class="detail-row"><span class="label">快递单号</span><span class="value">${o.tracking_number?esc(o.tracking_number)+` <button class="copy-btn" onclick="copyText('${esc(o.tracking_number).replace(/'/g,"\\'")}',this)">📋 复制</button>`:'<span class="text-muted">-</span>'}</span></div>
+    </div>
+    <div class="detail-section"><h3>💬 备注</h3>
+      <div style="font-size:14px;white-space:pre-wrap;word-break:break-word">${o.notes?esc(o.notes):'<span class="text-muted">-</span>'}</div>
+    </div>
   `;
   const actions=document.getElementById('sheetActions');
   actions.innerHTML=`
@@ -926,9 +929,9 @@ function closeSheet(){
 }
 window.closeSheet=closeSheet;
 function sheetToggle(id){
-  const o=getOrders().find(x=>x.id===id);if(!o)return;
+  const orders=getOrders();const o=orders.find(x=>x.id===id);if(!o)return;
   o.status=o.status==='pending'?'completed':'pending';
-  saveOrders(getOrders());toast(o.status==='completed'?'已标记完成 ✅':'已恢复待完成 ⏳');
+  saveOrders(orders);toast(o.status==='completed'?'已标记完成 ✅':'已恢复待完成 ⏳');
   openSheet(id);renderOrderList();
 }
 function sheetDelete(id){
@@ -966,16 +969,19 @@ function renderDetail(id){
     <div class="detail-section"><h3>📋 基本信息</h3>
       <div class="detail-row"><span class="label">客户</span><span class="value">${esc(o.customer_name)}</span></div>
       <div class="detail-row"><span class="label">品类</span><span class="value">${esc(o.category)}</span></div>
+      <div class="detail-row"><span class="label">金额</span><span class="value">¥${(o.amount||0).toFixed(2)}</span></div>
       <div class="detail-row"><span class="label">日期</span><span class="value">${o.order_date||'-'}</span></div>
+      <div class="detail-row"><span class="label">状态</span><span class="value"><span class="status-tag ${cls}">${label}</span></span></div>
     </div>
-    ${o.receiver_name||o.receiver_phone||o.receiver_address?`
     <div class="detail-section"><h3>📦 收货信息</h3>
-      ${o.receiver_name?`<div class="detail-row"><span class="label">收件人</span><span class="value">${esc(o.receiver_name)}</span></div>`:''}
-      ${o.receiver_phone?`<div class="detail-row"><span class="label">电话</span><span class="value"><a href="tel:${esc(o.receiver_phone)}" style="color:var(--blue-600);text-decoration:none">${esc(o.receiver_phone)}</a></span></div>`:''}
-      ${o.receiver_address?`<div class="detail-row"><span class="label">地址</span><span class="value">${esc(o.receiver_address)}</span></div>`:''}
-      ${o.tracking_number?`<div class="detail-row"><span class="label">快递单号</span><span class="value">${esc(o.tracking_number)} <button class="copy-btn" onclick="copyText('${esc(o.tracking_number).replace(/'/g,"\\'")}',this)">📋 复制</button></span></div>`:''}
-    </div>`:''}
-    ${o.notes?`<div class="detail-section"><h3>💬 备注</h3><div style="font-size:14px;white-space:pre-wrap;word-break:break-word">${esc(o.notes)}</div></div>`:''}
+      <div class="detail-row"><span class="label">收件人</span><span class="value">${o.receiver_name?esc(o.receiver_name):'<span class="text-muted">-</span>'}</span></div>
+      <div class="detail-row"><span class="label">电话</span><span class="value">${o.receiver_phone?`<a href="tel:${esc(o.receiver_phone)}" style="color:var(--blue-600);text-decoration:none">${esc(o.receiver_phone)}</a>`:'<span class="text-muted">-</span>'}</span></div>
+      <div class="detail-row"><span class="label">地址</span><span class="value">${o.receiver_address?esc(o.receiver_address):'<span class="text-muted">-</span>'}</span></div>
+      <div class="detail-row"><span class="label">快递单号</span><span class="value">${o.tracking_number?esc(o.tracking_number)+` <button class="copy-btn" onclick="copyText('${esc(o.tracking_number).replace(/'/g,"\\'")}',this)">📋 复制</button>`:'<span class="text-muted">-</span>'}</span></div>
+    </div>
+    <div class="detail-section"><h3>💬 备注</h3>
+      <div style="font-size:14px;white-space:pre-wrap;word-break:break-word">${o.notes?esc(o.notes):'<span class="text-muted">-</span>'}</div>
+    </div>
     <div class="detail-actions">
       ${o.status==='pending'?`<button class="btn btn-success btn-sm" onclick="dtToggle(${o.id})">✅ 标记为已完成</button>`:`<button class="btn btn-outline btn-sm" onclick="dtToggle(${o.id})">⏳ 恢复为待完成</button>`}
       <button class="btn btn-outline btn-sm" onclick="showPage('form',${o.id})">✏️ 编辑</button>
@@ -983,9 +989,9 @@ function renderDetail(id){
     </div>`;
 }
 function dtToggle(id){
-  const o=getOrders().find(x=>x.id===id);if(!o)return;
+  const orders=getOrders();const o=orders.find(x=>x.id===id);if(!o)return;
   o.status=o.status==='pending'?'completed':'pending';
-  saveOrders(getOrders());renderDetail(id);renderOrderList();
+  saveOrders(orders);renderDetail(id);renderOrderList();
   toast(o.status==='completed'?'已标记完成 ✅':'已恢复待完成 ⏳');
 }
 function dtDelete(id){
