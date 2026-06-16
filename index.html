@@ -875,7 +875,7 @@ function onCardUp(e,card,id){
   if(!cardTS.moved||(Math.abs(dx)<10&&ady<15)){
     // 轻触 → 查看详情
     card.style.transform='translateX(0)';card.classList.remove('swiped');
-    if(window.innerWidth<768){openSheet(id)}else{showPage('detail',id)}
+    showPage('detail',id);
   }else if(dx<-50){
     // 左滑 → 露出操作按钮
     card.style.transform='translateX(-152px)';card.classList.add('swiped');
@@ -892,11 +892,12 @@ function resetAllCardsExcept(keep){
 }
 function resetAllCards(){resetAllCardsExcept(null);}
 
-/* ==================== 卡片点击（桌面端使用） ==================== */
+/* ==================== 卡片点击（兜底——触摸事件已在onCardUp中处理） ==================== */
 function onCardClick(id){
   if(selectMode){toggleSelect(id);return}
+  if(sheetOpen)return;  // 触摸事件已打开面板，避免重复触发导致关闭
   resetAllCards();
-  if(window.innerWidth>=768){showPage('detail',id)}
+  showPage('detail',id);
 }
 
 /* ==================== 快速操作 ==================== */
@@ -906,8 +907,14 @@ function quickToggle(id){
   saveOrders(orders);renderOrderList();
   toast(o.status==='completed'?'已标记完成 ✅':'已恢复待完成 ⏳');
 }
-function quickComplete(id){const o=getOrders().find(x=>x.id===id);if(o){o.status='completed';saveOrders(getOrders());renderOrderList();toast('已标记完成 ✅')}}
-function quickPending(id){const o=getOrders().find(x=>x.id===id);if(o){o.status='pending';saveOrders(getOrders());renderOrderList();toast('已恢复待完成 ⏳')}}
+function quickComplete(id){
+  const orders=getOrders();const o=orders.find(x=>x.id===id);if(!o)return;
+  o.status='completed';saveOrders(orders);renderOrderList();toast('已标记完成 ✅');
+}
+function quickPending(id){
+  const orders=getOrders();const o=orders.find(x=>x.id===id);if(!o)return;
+  o.status='pending';saveOrders(orders);renderOrderList();toast('已恢复待完成 ⏳');
+}
 function quickDelete(id){
   const orders=getOrders();const idx=orders.findIndex(x=>x.id===id);
   if(idx<0)return;const [deleted]=orders.splice(idx,1);saveOrders(orders);
