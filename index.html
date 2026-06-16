@@ -892,7 +892,12 @@ function openSheet(id){
   const label=o.status==='pending'?'待完成':'已完成',cls=o.status;
   document.getElementById('sheetOverlay').classList.add('show');
   document.getElementById('sheetContent').innerHTML=`
-    <h2 style="text-align:center;font-size:17px;color:var(--blue-700);margin-bottom:10px">📄 订单详情 <span class="status-tag ${cls}">${label}</span></h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="closeSheet()" style="border:none;background:var(--blue-50);color:var(--blue-600);font-size:14px;cursor:pointer;padding:6px 14px;border-radius:16px;font-weight:500;-webkit-tap-highlight-color:transparent;">← 返回</button>
+      <span style="font-size:17px;font-weight:700;color:var(--blue-700)">📄 订单详情</span>
+      <span style="width:56px"></span>
+    </div>
+    <div style="text-align:center;margin-bottom:6px"><span class="status-tag ${cls}">${label}</span></div>
     <div class="detail-amount">¥${(o.amount||0).toFixed(2)}</div>
     <div class="detail-section"><h3>📋 基本信息</h3>
       <div class="detail-row"><span class="label">客户</span><span class="value">${esc(o.customer_name)}</span></div>
@@ -964,7 +969,12 @@ function renderDetail(id){
   if(!o){toast('订单不存在');setTimeout(()=>showPage('orders'),800);return}
   const label=o.status==='pending'?'待完成':'已完成',cls=o.status;
   document.getElementById('detailContent').innerHTML=`
-    <h2>📄 订单详情 <span class="status-tag ${cls}">${label}</span></h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button onclick="showPage('orders')" style="border:none;background:var(--blue-50);color:var(--blue-600);font-size:14px;cursor:pointer;padding:6px 14px;border-radius:16px;font-weight:500;-webkit-tap-highlight-color:transparent;">← 返回列表</button>
+      <span style="font-size:18px;font-weight:700;color:var(--blue-700)">📄 订单详情</span>
+      <span style="width:56px"></span>
+    </div>
+    <div style="text-align:center;margin-bottom:8px"><span class="status-tag ${cls}">${label}</span></div>
     <div class="detail-amount">¥${(o.amount||0).toFixed(2)}</div>
     <div class="detail-section"><h3>📋 基本信息</h3>
       <div class="detail-row"><span class="label">客户</span><span class="value">${esc(o.customer_name)}</span></div>
