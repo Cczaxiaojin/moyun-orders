@@ -666,7 +666,7 @@ function nextId(){
 let curFilter='all',curSearch='',curPage='orders',editingId=null,delTargetId=null,viewId=null;
 let selectMode=false,selectedIds=new Set();
 let sheetOpen=false;
-let swipeState={startX:0,startY:0,offsetX:0,card:null,locked:false};
+let cardTS={card:null,id:null,startX:0,startY:0,lastX:0,lastY:0,moved:false,timer:null};
 let pageSwipe={startX:0,startY:0,trackStart:0};
 let pullState={startY:0,pulling:false,refreshed:false};
 let snackTimer=null;
@@ -827,9 +827,9 @@ function renderOrderList(){
     return `<div class="order-card-wrapper${selectMode&&selectedIds.has(o.id)?' selected':''}${selectMode?' select-mode':''}" data-id="${o.id}">
       <div class="checkbox" onclick="event.stopPropagation();toggleSelect(${o.id})"></div>
       <div class="order-card-actions">${actLeft}${actRight}</div>
-      <div class="order-card" onmousedown="onCardDown(event,this)" ontouchstart="onCardDown(event,this)" ontouchmove="onCardMove(event,this)" ontouchend="onCardUp(event,this)" onclick="onCardClick(${o.id})">
+      <div class="order-card" onmousedown="onCardDown(event,this,${o.id})" ontouchstart="onCardDown(event,this,${o.id})" ontouchmove="onCardMove(event,this)" ontouchend="onCardUp(event,this,${o.id})" onclick="onCardClick(${o.id})">
         <div class="card-main">
-          <div class="card-title">${esc(o.customer_name)} <span class="status-tag ${cls}">${label}</span></div>
+          <div class="card-title">${esc(o.customer_name)} <span class="status-tag ${cls}" onclick="event.stopPropagation();quickToggle(${o.id})" style="cursor:pointer">${label}</span></div>
           <div class="card-meta"><span>🏷️ ${esc(o.category)}</span><span>📅 ${date}</span>${o.receiver_name?'<span>📦 '+esc(o.receiver_name)+'</span>':''}</div>
         </div>
         <div class="card-right"><div class="card-amount">¥${(o.amount||0).toFixed(2)}</div></div>
@@ -838,42 +838,74 @@ function renderOrderList(){
   }).join('');
 }
 
-/* ==================== 卡片左滑 ==================== */
-function onCardDown(e,card){
-  if(selectMode||e.target.closest('button'))return;
-  swipeState.startX=e.touches?e.touches[0].clientX:e.clientX;
-  swipeState.startY=e.touches?e.touches[0].clientY:e.clientY;
-  swipeState.card=card;swipeState.locked=false;
+/* ==================== 统一卡片触摸（轻触→详情 / 左滑→操作 / 长按→多选） ==================== */
+function onCardDown(e,card,id){
+  if(selectMode||e.target.closest('button,.status-tag,.copy-btn'))return;
+  resetAllCardsExcept(card);
+  const t=e.touches?e.touches[0]:e;
+  cardTS.card=card;cardTS.id=id;
+  cardTS.startX=t.clientX;cardTS.startY=t.clientY;
+  cardTS.lastX=t.clientX;cardTS.lastY=t.clientY;
+  cardTS.moved=false;
+  clearTimeout(cardTS.timer);
+  cardTS.timer=setTimeout(()=>{
+    if(!cardTS.moved&&cardTS.card){
+      enterSelectMode();
+      if(cardTS.id){selectedIds.add(cardTS.id);updateSelectUI();}
+      cardTS.card=null;
+    }
+  },500);
 }
 function onCardMove(e,card){
-  if(!swipeState.card||selectMode||swipeState.locked)return;
-  const dx=(e.touches[0].clientX-swipeState.startX);
-  const dy=e.touches[0].clientY-swipeState.startY;
-  if(Math.abs(dy)>Math.abs(dx)){swipeState.card=null;return}
-  if(dx<-10||dx>10)swipeState.locked=true;
-  if(dx<-10){
-    const off=Math.max(-152,Math.min(0,dx));card.style.transform=`translateX(${off}px)`;
-  }else{card.style.transform='translateX(0)'}
+  if(!cardTS.card||cardTS.card!==card)return;
+  const t=e.touches?e.touches[0]:e;
+  cardTS.lastX=t.clientX;cardTS.lastY=t.clientY;
+  const dx=t.clientX-cardTS.startX,dy=t.clientY-cardTS.startY;
+  if(!cardTS.moved&&Math.abs(dx)<5&&Math.abs(dy)<5)return;
+  if(!cardTS.moved&&Math.abs(dy)>Math.abs(dx)*1.5){clearTimeout(cardTS.timer);cardTS.card=null;return}
+  cardTS.moved=true;clearTimeout(cardTS.timer);
+  if(dx<0){card.style.transform=`translateX(${Math.max(-152,dx)}px)`}
+  else if(card.classList.contains('swiped')){card.style.transform=`translateX(${Math.min(0,-152+dx)}px)`}
 }
-function onCardUp(e,card){
-  if(!swipeState.card){return}
-  const dx=(e.changedTouches?e.changedTouches[0].clientX:swipeState.startX)-swipeState.startX;
-  if(dx<-50){card.style.transform='translateX(-152px)';card.classList.add('swiped')}
-  else{card.style.transform='translateX(0)';card.classList.remove('swiped')}
-  swipeState.card=null;swipeState.locked=false;
+function onCardUp(e,card,id){
+  clearTimeout(cardTS.timer);
+  if(!cardTS.card||cardTS.card!==card){cardTS.card=null;return}
+  const dx=cardTS.lastX-cardTS.startX;
+  const ady=Math.abs(cardTS.lastY-cardTS.startY);
+  if(!cardTS.moved||(Math.abs(dx)<10&&ady<15)){
+    // 轻触 → 查看详情
+    card.style.transform='translateX(0)';card.classList.remove('swiped');
+    if(window.innerWidth<768){openSheet(id)}else{showPage('detail',id)}
+  }else if(dx<-50){
+    // 左滑 → 露出操作按钮
+    card.style.transform='translateX(-152px)';card.classList.add('swiped');
+  }else if(dx>30&&card.classList.contains('swiped')){
+    // 右滑 → 关闭操作按钮
+    card.style.transform='translateX(0)';card.classList.remove('swiped');
+  }else{
+    card.style.transform=card.classList.contains('swiped')?'translateX(-152px)':'translateX(0)';
+  }
+  cardTS.card=null;
 }
-function resetAllCards(){
-  document.querySelectorAll('.order-card').forEach(c=>{c.style.transform='';c.classList.remove('swiped')});
+function resetAllCardsExcept(keep){
+  document.querySelectorAll('.order-card').forEach(c=>{if(c!==keep){c.style.transform='';c.classList.remove('swiped')}});
 }
+function resetAllCards(){resetAllCardsExcept(null);}
 
-/* ==================== 卡片点击 → 底部弹出面板 ==================== */
+/* ==================== 卡片点击（桌面端使用） ==================== */
 function onCardClick(id){
   if(selectMode){toggleSelect(id);return}
   resetAllCards();
-  if(window.innerWidth<768){openSheet(id)}else{showPage('detail',id)}
+  if(window.innerWidth>=768){showPage('detail',id)}
 }
 
-/* ==================== 快速操作(左滑按钮) ==================== */
+/* ==================== 快速操作 ==================== */
+function quickToggle(id){
+  const orders=getOrders();const o=orders.find(x=>x.id===id);if(!o)return;
+  o.status=o.status==='pending'?'completed':'pending';
+  saveOrders(orders);renderOrderList();
+  toast(o.status==='completed'?'已标记完成 ✅':'已恢复待完成 ⏳');
+}
 function quickComplete(id){const o=getOrders().find(x=>x.id===id);if(o){o.status='completed';saveOrders(getOrders());renderOrderList();toast('已标记完成 ✅')}}
 function quickPending(id){const o=getOrders().find(x=>x.id===id);if(o){o.status='pending';saveOrders(getOrders());renderOrderList();toast('已恢复待完成 ⏳')}}
 function quickDelete(id){
@@ -882,25 +914,9 @@ function quickDelete(id){
   renderOrderList();
   showSnackbar('订单已删除',()=>{orders.splice(idx,0,deleted);saveOrders(orders);renderOrderList();toast('已撤销 ✅')});
 }
-window.quickComplete=quickComplete;window.quickPending=quickPending;window.quickDelete=quickDelete;
+window.quickToggle=quickToggle;window.quickComplete=quickComplete;window.quickPending=quickPending;window.quickDelete=quickDelete;
 
-/* ==================== 长按多选 ==================== */
-let longPressTimer=null;
-document.addEventListener('mousedown',function(e){if(!e.target.closest('.order-card'))return;startLongPress(e)});
-document.addEventListener('mouseup',cancelLongPress);
-document.addEventListener('touchstart',function(e){if(!e.target.closest('.order-card')||e.target.closest('button,.checkbox'))return;startLongPress(e)},{passive:true});
-document.addEventListener('touchend',cancelLongPress);
-document.addEventListener('touchmove',function(){if(longPressTimer&&!selectMode)cancelLongPress()},{passive:true});
-
-function startLongPress(e){
-  if(selectMode)return;
-  longPressTimer=setTimeout(()=>{
-    enterSelectMode();
-    const card=e.target.closest('.order-card-wrapper');
-    if(card){const id=parseInt(card.dataset.id);selectedIds.add(id);updateSelectUI()}
-  },500);
-}
-function cancelLongPress(){clearTimeout(longPressTimer);longPressTimer=null}
+/* ==================== 多选模式 ==================== */
 function enterSelectMode(){selectMode=true;resetAllCards();selectedIds.clear();document.getElementById('selectBar').classList.add('show');document.getElementById('fabBtn').classList.add('hidden');renderOrderList()}
 function exitSelect(){selectMode=false;selectedIds.clear();document.getElementById('selectBar').classList.remove('show');document.getElementById('fabBtn').classList.remove('hidden');renderOrderList()}
 window.exitSelect=exitSelect;
@@ -1250,6 +1266,7 @@ window.confirmDeleteSingle=confirmDeleteSingle;
 window.goStep=goStep;window.nextStep=nextStep;window.prevStep=prevStep;
 window.batchComplete=batchComplete;window.batchDelete=batchDelete;window.exitSelect=exitSelect;
 window.toggleSelect=toggleSelect;
+window.quickToggle=quickToggle;
 
 })();
 </script>
